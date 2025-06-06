@@ -41,9 +41,10 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     void Start()
     {
-        StartPythonConnection();
+        // StartPythonConnection();
         webcamTexture = new Texture2D(2, 2);
-        Invoke(nameof(ConnectToServer), 2f);
+        Thread conn = new Thread(ConnectToServer);
+        conn.Start();
     }
 
     public void StartPythonConnection()
@@ -100,43 +101,33 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
             {
                 UnityEngine.Debug.Log($"Connection attempt {currentRetry + 1}/{maxRetries}");
 
+                UnityEngine.Debug.Log("Attempting to connect to Python server...");
                 tcpClient = new TcpClient(serverIP, serverPort);
+                UnityEngine.Debug.Log("Connected!");
+
                 stream = tcpClient.GetStream();
                 isConnected = true;
 
                 UnityEngine.Debug.Log("Connected to Python server");
 
-                // PASO 1: Esperar que Python diga que está listo
                 if (WaitForMessage("PYTHON_READY", 30f))
                 {
                     UnityEngine.Debug.Log("Received PYTHON_READY");
 
-                    // PASO 2: Unity confirma que está listo
-                    SendCustomMessage("UNITY_READY");
+                    SendCustomMessage("UNITY_READY\n");
                     UnityEngine.Debug.Log("Sent UNITY_READY");
 
-                    // PASO 3: Esperar confirmación para comenzar transmisión
-                    if (WaitForMessage("START_TRANSMISSION", 10f))
-                    {
-                        UnityEngine.Debug.Log("Received START_TRANSMISSION - Beginning data reception");
-                        isReceivingData = true;
+                    isReceivingData = true;
 
-                        // Iniciar hilo de recepción de datos
-                        receiveThread = new Thread(ReceiveData);
-                        receiveThread.Start();
-                        return; // ¡Éxito!
-                    }
-                    else
-                    {
-                        UnityEngine.Debug.LogError("Failed to receive START_TRANSMISSION");
-                    }
+                    receiveThread = new Thread(ReceiveData);
+                    receiveThread.Start();
+                    return;
                 }
                 else
                 {
                     UnityEngine.Debug.LogError("Failed to receive PYTHON_READY");
                 }
 
-                // Si llegamos aquí, algo falló
                 tcpClient.Close();
                 isConnected = false;
 
@@ -159,10 +150,10 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     private bool WaitForMessage(string expectedMessage, float timeoutSeconds)
     {
-        float startTime = Time.time;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         byte[] buffer = new byte[1024];
 
-        while ((Time.time - startTime) < timeoutSeconds)
+        while (stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
         {
             if (stream.DataAvailable)
             {
@@ -188,12 +179,13 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
                     return false;
                 }
             }
-            Thread.Sleep(100); // Evitar busy waiting
+            Thread.Sleep(100);
         }
 
         UnityEngine.Debug.LogError($"Timeout waiting for '{expectedMessage}'");
         return false;
     }
+
 
     private void SendCustomMessage(string message)
     {
@@ -213,7 +205,7 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     void ReceiveData()
     {
-        byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
+        byte[] buffer = new byte[1024 * 1024];
         string incompleteData = "";
 
         UnityEngine.Debug.Log("Data reception thread started");
@@ -230,11 +222,10 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
                         string newData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                         incompleteData += newData;
 
-                        // Procesar mensajes completos usando protocolo "length:data"
                         while (true)
                         {
                             int colonIndex = incompleteData.IndexOf(':');
-                            if (colonIndex == -1) break; // No hay mensaje completo aún
+                            if (colonIndex == -1) break;
 
                             string lengthStr = incompleteData.Substring(0, colonIndex);
                             if (int.TryParse(lengthStr, out int expectedLength))
@@ -242,29 +233,27 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
                                 int totalMessageLength = colonIndex + 1 + expectedLength;
                                 if (incompleteData.Length >= totalMessageLength)
                                 {
-                                    // Tenemos un mensaje completo
                                     string jsonData = incompleteData.Substring(colonIndex + 1, expectedLength);
-                                    ProcessReceivedData(jsonData);
+                                    ProcessReceivedData($"{lengthStr}:{jsonData}");
 
-                                    // Remover el mensaje procesado del buffer
                                     incompleteData = incompleteData.Substring(totalMessageLength);
                                 }
                                 else
                                 {
-                                    // Mensaje incompleto, esperar más datos
                                     break;
                                 }
                             }
                             else
                             {
                                 UnityEngine.Debug.LogError("Invalid message format - could not parse length");
-                                incompleteData = ""; // Limpiar buffer corrupto
+
+                                incompleteData = "";
                                 break;
                             }
                         }
                     }
                 }
-                Thread.Sleep(1); // Mantener tu timing original
+                Thread.Sleep(1);
             }
             catch (Exception e)
             {
@@ -334,6 +323,9 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
             float worldY = backgroundSpriteRenderer.transform.position.y - spriteHeight / 2f + clampedY * spriteHeight;
 
             Vector3 worldPos = new Vector3(worldX, worldY, 0f);
+
+            UnityEngine.Debug.Log($"Updating head position to: {worldPos}");
+            if (head == null) UnityEngine.Debug.LogError("Head controller is NULL");
             head.SetTargetPosition(worldPos);
         }
     }
