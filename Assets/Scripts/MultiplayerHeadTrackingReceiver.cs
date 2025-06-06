@@ -41,7 +41,7 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     void Start()
     {
-        // StartPythonConnection();
+        StartPythonConnection();
         webcamTexture = new Texture2D(2, 2);
         Thread conn = new Thread(ConnectToServer);
         conn.Start();
@@ -324,7 +324,6 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
             Vector3 worldPos = new Vector3(worldX, worldY, 0f);
 
-            UnityEngine.Debug.Log($"Updating head position to: {worldPos}");
             if (head == null) UnityEngine.Debug.LogError("Head controller is NULL");
             head.SetTargetPosition(worldPos);
         }
