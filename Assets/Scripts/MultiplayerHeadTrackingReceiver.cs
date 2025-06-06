@@ -41,7 +41,7 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     void Start()
     {
-        // StartPythonConnection();
+        StartPythonConnection();
         webcamTexture = new Texture2D(2, 2);
         Thread conn = new Thread(ConnectToServer);
         conn.Start();
@@ -92,14 +92,13 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     void ConnectToServer()
     {
-        int maxRetries = 10;
-        int currentRetry = 0;
+        int attempt = 1;
 
-        while (currentRetry < maxRetries)
+        while (true)
         {
             try
             {
-                UnityEngine.Debug.Log($"Connection attempt {currentRetry + 1}/{maxRetries}");
+                UnityEngine.Debug.Log($"Connection attempt {attempt}");
 
                 UnityEngine.Debug.Log("Attempting to connect to Python server...");
                 tcpClient = new TcpClient(serverIP, serverPort);
@@ -130,23 +129,18 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
                 tcpClient.Close();
                 isConnected = false;
-
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogWarning($"Connection attempt {currentRetry + 1} failed: {e.Message}");
+                UnityEngine.Debug.LogWarning($"Connection attempt {attempt} failed: {e.Message}");
             }
 
-            currentRetry++;
-            if (currentRetry < maxRetries)
-            {
-                UnityEngine.Debug.Log("Retrying in 2 seconds...");
-                Thread.Sleep(2000);
-            }
+            UnityEngine.Debug.Log("Retrying in 2 seconds...");
+            Thread.Sleep(2000);
+            attempt++;
         }
-
-        UnityEngine.Debug.LogError("Failed to connect after all attempts");
     }
+
 
     private bool WaitForMessage(string expectedMessage, float timeoutSeconds)
     {
@@ -324,7 +318,6 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
             Vector3 worldPos = new Vector3(worldX, worldY, 0f);
 
-            UnityEngine.Debug.Log($"Updating head position to: {worldPos}");
             if (head == null) UnityEngine.Debug.LogError("Head controller is NULL");
             head.SetTargetPosition(worldPos);
         }
