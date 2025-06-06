@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8716523514790881978}
   - component: {fileID: 6434896285216790914}
   - component: {fileID: 3213779321197525648}
+  - component: {fileID: 8207805992147896187}
   m_Layer: 0
   m_Name: Heart
   m_TagString: Untagged
@@ -163,6 +164,41 @@ MonoBehaviour:
   blinkDuration: 0.1
   blinkCount: 5
   background: {fileID: 8622990746698189648}
+--- !u!114 &8207805992147896187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1714306854587138457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1351115797, guid: 0ae8d181602a00248a82f64a684a1c88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Multiplayer: {fileID: 0}
+  _uidString: 1d8f7968-f746-4428-a0a0-f73617a31c9d
+  BucketBehaviors:
+  - Name: Min
+    NetLOD: 0
+    Frequency: -1
+  - Name: Low
+    NetLOD: 1
+    Frequency: 0
+  - Name: Mid
+    NetLOD: 2
+    Frequency: 0
+  - Name: High
+    NetLOD: 3
+    Frequency: 0
+  - Name: Max
+    NetLOD: 4
+    Frequency: 120
+  Reliability: 2
+  UseGlobalPosition: 0
+  OnlySyncFromRoomOwner: 0
+  refreshRate: 30
+  SyncedAxes: 203
 --- !u!1 &2479216516080940139
 GameObject:
   m_ObjectHideFlags: 0
@@ -174,7 +210,6 @@ GameObject:
   - component: {fileID: 3894021465894127872}
   - component: {fileID: 6031955116031230793}
   - component: {fileID: 5545484609191547337}
-  - component: {fileID: 1401691740301686810}
   m_Layer: 0
   m_Name: MultiplayerHeart
   m_TagString: Untagged
@@ -217,6 +252,8 @@ MonoBehaviour:
   head: {fileID: 3213779321197525648}
   mainCamera: {fileID: 0}
   smoothingFactor: 0.8
+  isConnected: 0
+  isReceivingData: 0
 --- !u!114 &5545484609191547337
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,41 +275,6 @@ MonoBehaviour:
   OnUnpossessed:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &1401691740301686810
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2479216516080940139}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1312809854, guid: 0ae8d181602a00248a82f64a684a1c88, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Multiplayer: {fileID: 0}
-  _uidString: 09d87b67-b9e2-4c91-a40d-d80591141ae8
-  BucketBehaviors:
-  - Name: Min
-    NetLOD: 0
-    Frequency: -1
-  - Name: Low
-    NetLOD: 1
-    Frequency: 0
-  - Name: Mid
-    NetLOD: 2
-    Frequency: 0
-  - Name: High
-    NetLOD: 3
-    Frequency: 0
-  - Name: Max
-    NetLOD: 4
-    Frequency: 120
-  Reliability: 2
-  UseGlobalPosition: 0
-  OnlySyncFromRoomOwner: 0
-  refreshRate: 30
-  SyncedAxes: 511
 --- !u!1 &4699318752701097791
 GameObject:
   m_ObjectHideFlags: 0
