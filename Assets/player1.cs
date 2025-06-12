@@ -9,12 +9,13 @@ public class player1 : MonoBehaviour
         float moveX = 0f;
         float moveY = 0f;
 
-        if (Input.GetKey(KeyCode.W)) moveY = 1f;
-        if (Input.GetKey(KeyCode.S)) moveY = -1f;
-        if (Input.GetKey(KeyCode.A)) moveX = -1f;
-        if (Input.GetKey(KeyCode.D)) moveX = 1f;
+        // Usar teclas 1 (abajo), 2 (izquierda), 3 (derecha), 4 (arriba)
+        if (Input.GetKey(KeyCode.Alpha1)) moveY = -1f; // abajo
+        if (Input.GetKey(KeyCode.Alpha2)) moveX = -1f; // izquierda
+        if (Input.GetKey(KeyCode.Alpha3)) moveX = 1f;  // derecha
+        if (Input.GetKey(KeyCode.Alpha4)) moveY = 1f;  // arriba
 
-        Vector3 moveDir = new Vector3(moveX, moveY, 0).normalized;
+        Vector3 moveDir = new Vector3(moveX, moveY, 0f).normalized;
 
         if (transform.parent != null)
         {
