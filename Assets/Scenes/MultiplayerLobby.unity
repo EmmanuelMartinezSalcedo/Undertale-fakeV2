@@ -363,6 +363,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1102478636, guid: 5a577542a281e0a448dc3b383023e1f2, type: 3}
+      propertyPath: ShowUserCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8763101912591529871, guid: 5a577542a281e0a448dc3b383023e1f2, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
@@ -578,9 +582,9 @@ MonoBehaviour:
   - Name: Max
     NetLOD: 4
     Users: 
-  _maxPlayers: 10
+  _maxPlayers: 2
   AvatarSpawning: 1
-  AvatarPrefab: {fileID: 5545484609191547337, guid: 990036ad1010daa45bf6c5cd52195186, type: 3}
+  AvatarPrefab: {fileID: 3337951524640406736, guid: 97aacaf7d21affd4fac9085080e40ab5, type: 3}
   AvatarSpawnLocation: {fileID: 374090952}
   SpawnAvatarPerIndex: 0
   AvatarSpawnLocations: []
