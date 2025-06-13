@@ -7,7 +7,41 @@ using Newtonsoft.Json;
 using System.Diagnostics;
 using System.IO;
 
-public class MultiplayerHeadTrackingReceiver : MonoBehaviour
+public interface ITrackingData
+{
+    string frame_data { get; set; }
+}
+
+[System.Serializable]
+public class HeadData : ITrackingData
+{
+    public Position head_position;
+    public string frame_data { get; set; }
+}
+
+[System.Serializable]
+public class HandsData : ITrackingData
+{
+    public HandCoordinates hand_positions;
+    public string frame_data { get; set; }
+}
+
+[System.Serializable]
+public class HandCoordinates
+{
+    public Position left;
+    public Position right;
+}
+
+[System.Serializable]
+public class Position
+{
+    public float normalized_x;
+    public float normalized_y;
+}
+
+
+public class MultiplayerTrackingReceiver : MonoBehaviour
 {
     [Header("Configuración de Red")]
     public string serverIP = "127.0.0.1";
@@ -16,6 +50,8 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
     [Header("Elementos de escena")]
     public SpriteRenderer backgroundSpriteRenderer;
     public MultiplayerPlayerController head;
+    public MultiplayerPlayerController barrierLeft;
+    public MultiplayerPlayerController barrierRight;
     public Camera mainCamera;
 
     [Header("Configuración")]
@@ -25,15 +61,29 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
     public bool isConnected = false;
     public bool isReceivingData = false;
 
+    [Header("Player")]
+    public bool isPlayer2 = true;
+
+    [Header("PlayerData")]
+    public GameObject Heart;
+    public GameObject BarrierLeft;
+    public GameObject BarrierRight;
+
     private TcpClient tcpClient;
     private NetworkStream stream;
     private Thread receiveThread;
 
     private Texture2D webcamTexture;
-    private HeadData latestHeadData;
+    private ITrackingData latestData;
     private bool hasNewData = false;
-    private Vector2 smoothedPosition;
-    private Vector2 targetPosition;
+
+    private Vector2 headSmoothedPositon;
+    private Vector2 headTargetPosition;
+
+    private Vector2 leftHandSmoothedPositon;
+    private Vector2 leftHandTargetPosition;
+    private Vector2 rightHandSmoothedPositon;
+    private Vector2 rightHandTargetPosition;
 
     private StringBuilder messageBuffer = new StringBuilder();
 
@@ -41,6 +91,7 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     void Start()
     {
+        preparePlayerData();
         StartPythonConnection();
         webcamTexture = new Texture2D(2, 2);
         Thread conn = new Thread(ConnectToServer);
@@ -49,7 +100,16 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
     public void StartPythonConnection()
     {
-        string relativePath = "Scripts/Python/HeadTracking/HeadTracker.exe";
+        string relativePath;
+        if (isPlayer2)
+        {
+            relativePath = "Scripts/Python/HandsTracking/HandsTracker.exe";
+        }
+        else
+        {
+            relativePath = "Scripts/Python/HeadTracking/HeadTracker.exe";
+        }
+
         string exePath = Path.Combine(Application.dataPath, relativePath);
 
         if (File.Exists(exePath))
@@ -99,8 +159,6 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
             try
             {
                 UnityEngine.Debug.Log($"Connection attempt {attempt}");
-
-                UnityEngine.Debug.Log("Attempting to connect to Python server...");
                 tcpClient = new TcpClient(serverIP, serverPort);
                 UnityEngine.Debug.Log("Connected!");
 
@@ -141,7 +199,6 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
         }
     }
 
-
     private bool WaitForMessage(string expectedMessage, float timeoutSeconds)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -158,7 +215,7 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
                     UnityEngine.Debug.Log($"Received: '{receivedMessage}', Expected: '{expectedMessage}'");
 
-                    if (receivedMessage == expectedMessage)
+                    if (receivedMessage.StartsWith(expectedMessage))
                     {
                         return true;
                     }
@@ -179,7 +236,6 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
         UnityEngine.Debug.LogError($"Timeout waiting for '{expectedMessage}'");
         return false;
     }
-
 
     private void SendCustomMessage(string message)
     {
@@ -227,7 +283,13 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
                                 int totalMessageLength = colonIndex + 1 + expectedLength;
                                 if (incompleteData.Length >= totalMessageLength)
                                 {
+                                    UnityEngine.Debug.Log($"incompleteData (primeros 500 chars): {incompleteData.Substring(0, Math.Min(500, incompleteData.Length))}");
+                                    UnityEngine.Debug.Log($"lengthStr = '{lengthStr}', parsedLength = {expectedLength}, colonIndex = {colonIndex}");
+
                                     string jsonData = incompleteData.Substring(colonIndex + 1, expectedLength);
+
+                                    UnityEngine.Debug.Log($"JSON recibido (largo {expectedLength}): {jsonData}");
+
                                     ProcessReceivedData($"{lengthStr}:{jsonData}");
 
                                     incompleteData = incompleteData.Substring(totalMessageLength);
@@ -280,8 +342,17 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
             try
             {
-                HeadData headData = JsonConvert.DeserializeObject<HeadData>(jsonMessage);
-                latestHeadData = headData;
+                if (!isPlayer2)
+                {
+                    HeadData headData = JsonConvert.DeserializeObject<HeadData>(jsonMessage);
+                    latestData = headData;
+                }
+                else
+                {
+                    HandsData handsData = JsonConvert.DeserializeObject<HandsData>(jsonMessage);
+                    latestData = handsData;
+                }
+
                 hasNewData = true;
             }
             catch (Exception e)
@@ -294,33 +365,99 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
         messageBuffer.Append(bufferContent);
     }
 
+    void preparePlayerData()
+    {
+        if (!isPlayer2)
+        {
+            return;
+        }
+        else
+        {
+            Heart.SetActive(false);
+            BarrierLeft.SetActive(true);
+            BarrierRight.SetActive(true);
+        }
+    }
+
     void Update()
     {
-        if (hasNewData && latestHeadData != null)
+        if (hasNewData && latestData != null)
         {
-            ProcessHeadData(latestHeadData);
+            if (!isPlayer2 && latestData is HeadData head)
+            {
+                ProcessHeadData(head);
+            }
+            else if (latestData is HandsData hands)
+            {
+                ProcessHandsData(hands);
+            }
             hasNewData = false;
         }
 
-        if (head != null && backgroundSpriteRenderer != null && backgroundSpriteRenderer.sprite != null)
+        if (!isPlayer2)
         {
-            smoothedPosition = targetPosition;
+            if (head != null && backgroundSpriteRenderer != null && backgroundSpriteRenderer.sprite != null)
+            {
+                headSmoothedPositon = headTargetPosition;
 
-            Vector3 spriteScale = backgroundSpriteRenderer.transform.localScale;
-            float spriteWidth = backgroundSpriteRenderer.sprite.bounds.size.x * spriteScale.x;
-            float spriteHeight = backgroundSpriteRenderer.sprite.bounds.size.y * spriteScale.y;
+                Vector3 spriteScale = backgroundSpriteRenderer.transform.localScale;
+                float spriteWidth = backgroundSpriteRenderer.sprite.bounds.size.x * spriteScale.x;
+                float spriteHeight = backgroundSpriteRenderer.sprite.bounds.size.y * spriteScale.y;
 
-            float clampedX = Mathf.Clamp(smoothedPosition.x, 0f, 1f);
-            float clampedY = Mathf.Clamp(1f - smoothedPosition.y, 0f, 1f);
+                float clampedX = Mathf.Clamp(headSmoothedPositon.x, 0f, 1f);
+                float clampedY = Mathf.Clamp(1f - headSmoothedPositon.y, 0f, 1f);
 
-            float worldX = backgroundSpriteRenderer.transform.position.x - spriteWidth / 2f + clampedX * spriteWidth;
-            float worldY = backgroundSpriteRenderer.transform.position.y - spriteHeight / 2f + clampedY * spriteHeight;
+                float worldX = backgroundSpriteRenderer.transform.position.x - spriteWidth / 2f + clampedX * spriteWidth;
+                float worldY = backgroundSpriteRenderer.transform.position.y - spriteHeight / 2f + clampedY * spriteHeight;
 
-            Vector3 worldPos = new Vector3(worldX, worldY, 0f);
+                Vector3 worldPos = new Vector3(worldX, worldY, 0f);
 
-            if (head == null) UnityEngine.Debug.LogError("Head controller is NULL");
-            head.SetTargetPosition(worldPos);
+                if (head == null) UnityEngine.Debug.LogError("Head controller is NULL");
+                head.SetTargetPosition(worldPos);
+            }
         }
+        else
+        {
+            if (barrierLeft != null && backgroundSpriteRenderer != null && backgroundSpriteRenderer.sprite != null)
+            {
+                leftHandSmoothedPositon = leftHandTargetPosition;
+
+                Vector3 spriteScale = backgroundSpriteRenderer.transform.localScale;
+                float spriteWidth = backgroundSpriteRenderer.sprite.bounds.size.x * spriteScale.x;
+                float spriteHeight = backgroundSpriteRenderer.sprite.bounds.size.y * spriteScale.y;
+
+                float clampedX = Mathf.Clamp(leftHandSmoothedPositon.x, 0f, 1f);
+                float clampedY = Mathf.Clamp(1f - leftHandSmoothedPositon.y, 0f, 1f);
+
+                float worldX = backgroundSpriteRenderer.transform.position.x - spriteWidth / 2f + clampedX * spriteWidth;
+                float worldY = backgroundSpriteRenderer.transform.position.y - spriteHeight / 2f + clampedY * spriteHeight;
+
+                Vector3 worldPos = new Vector3(worldX, worldY, 0f);
+
+                if (barrierLeft == null) UnityEngine.Debug.LogError("barrierLeft controller is NULL");
+                barrierLeft.SetTargetPosition(worldPos);
+            }
+            if (barrierRight != null && backgroundSpriteRenderer != null && backgroundSpriteRenderer.sprite != null)
+            {
+                rightHandSmoothedPositon = rightHandTargetPosition;
+
+                Vector3 spriteScale = backgroundSpriteRenderer.transform.localScale;
+                float spriteWidth = backgroundSpriteRenderer.sprite.bounds.size.x * spriteScale.x;
+                float spriteHeight = backgroundSpriteRenderer.sprite.bounds.size.y * spriteScale.y;
+
+                float clampedX = Mathf.Clamp(rightHandSmoothedPositon.x, 0f, 1f);
+                float clampedY = Mathf.Clamp(1f - rightHandSmoothedPositon.y, 0f, 1f);
+
+                float worldX = backgroundSpriteRenderer.transform.position.x - spriteWidth / 2f + clampedX * spriteWidth;
+                float worldY = backgroundSpriteRenderer.transform.position.y - spriteHeight / 2f + clampedY * spriteHeight;
+
+                Vector3 worldPos = new Vector3(worldX, worldY, 0f);
+
+                if (barrierRight == null) UnityEngine.Debug.LogError("barrierRight controller is NULL");
+                barrierRight.SetTargetPosition(worldPos);
+            }
+        }
+        
     }
 
     void ProcessHeadData(HeadData data)
@@ -345,9 +482,47 @@ public class MultiplayerHeadTrackingReceiver : MonoBehaviour
 
         if (data.head_position != null)
         {
-            targetPosition = new Vector2(
+            headTargetPosition = new Vector2(
                 data.head_position.normalized_x,
                 data.head_position.normalized_y
+            );
+        }
+    }
+
+    void ProcessHandsData(HandsData data)
+    {
+
+        if (!string.IsNullOrEmpty(data.frame_data) && backgroundSpriteRenderer != null)
+        {
+            try
+            {
+                byte[] imageBytes = Convert.FromBase64String(data.frame_data);
+                webcamTexture.LoadImage(imageBytes);
+
+                Sprite newSprite = Sprite.Create(webcamTexture,
+                    new Rect(0, 0, webcamTexture.width, webcamTexture.height),
+                    new Vector2(0.5f, 0.5f));
+                backgroundSpriteRenderer.sprite = newSprite;
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogError($"Error cargando imagen: {e.Message}");
+            }
+        }
+
+        if (data.hand_positions?.left != null)
+        {
+            leftHandTargetPosition = new Vector2(
+                data.hand_positions.left.normalized_x,
+                data.hand_positions.left.normalized_y
+            );
+        }
+
+        if (data.hand_positions?.right != null)
+        {
+            rightHandTargetPosition = new Vector2(
+                data.hand_positions.right.normalized_x,
+                data.hand_positions.right.normalized_y
             );
         }
     }

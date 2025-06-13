@@ -7,19 +7,7 @@ using Newtonsoft.Json;
 using System.Diagnostics;
 using System.IO;
 
-[System.Serializable]
-public class HeadData
-{
-    public HeadPosition head_position;
-    public string frame_data;
-}
 
-[System.Serializable]
-public class HeadPosition
-{
-    public float normalized_x;
-    public float normalized_y;
-}
 
 public class HeadTrackingReceiver : MonoBehaviour
 {
