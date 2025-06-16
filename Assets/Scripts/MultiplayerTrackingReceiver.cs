@@ -365,19 +365,23 @@ public class MultiplayerTrackingReceiver : MonoBehaviour
         messageBuffer.Append(bufferContent);
     }
 
-    void preparePlayerData()
+    void PreparePlayerData()
     {
         if (!isPlayer2)
         {
-            return;
+            BarrierLeft.GetComponent<PolygonCollider2D>().enabled = false;
+            BarrierLeft.GetComponent<SpriteRenderer>().enabled = false;
+
+            BarrierRight.GetComponent<PolygonCollider2D>().enabled = false;
+            BarrierRight.GetComponent<SpriteRenderer>().enabled = false;
         }
         else
         {
-            Heart.SetActive(false);
-            BarrierLeft.SetActive(true);
-            BarrierRight.SetActive(true);
+            Heart.GetComponent<PolygonCollider2D>().enabled = false;
+            Heart.GetComponent<SpriteRenderer>().enabled = false;
         }
     }
+
 
     void Update()
     {
