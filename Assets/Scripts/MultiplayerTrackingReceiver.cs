@@ -91,7 +91,7 @@ public class MultiplayerTrackingReceiver : MonoBehaviour
 
     void Start()
     {
-        preparePlayerData();
+        PreparePlayerData();
         StartPythonConnection();
         webcamTexture = new Texture2D(2, 2);
         Thread conn = new Thread(ConnectToServer);
@@ -283,12 +283,7 @@ public class MultiplayerTrackingReceiver : MonoBehaviour
                                 int totalMessageLength = colonIndex + 1 + expectedLength;
                                 if (incompleteData.Length >= totalMessageLength)
                                 {
-                                    UnityEngine.Debug.Log($"incompleteData (primeros 500 chars): {incompleteData.Substring(0, Math.Min(500, incompleteData.Length))}");
-                                    UnityEngine.Debug.Log($"lengthStr = '{lengthStr}', parsedLength = {expectedLength}, colonIndex = {colonIndex}");
-
                                     string jsonData = incompleteData.Substring(colonIndex + 1, expectedLength);
-
-                                    UnityEngine.Debug.Log($"JSON recibido (largo {expectedLength}): {jsonData}");
 
                                     ProcessReceivedData($"{lengthStr}:{jsonData}");
 

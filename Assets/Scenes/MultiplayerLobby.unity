@@ -584,7 +584,7 @@ MonoBehaviour:
     Users: 
   _maxPlayers: 2
   AvatarSpawning: 1
-  AvatarPrefab: {fileID: 3337951524640406736, guid: 97aacaf7d21affd4fac9085080e40ab5, type: 3}
+  AvatarPrefab: {fileID: 5545484609191547337, guid: 990036ad1010daa45bf6c5cd52195186, type: 3}
   AvatarSpawnLocation: {fileID: 374090952}
   SpawnAvatarPerIndex: 0
   AvatarSpawnLocations: []
